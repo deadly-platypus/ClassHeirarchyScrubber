@@ -13,24 +13,17 @@ def parse_args():
             \'out\'""")
     return parser.parse_args()
 
-def updateFunctionCounts(className, funcName, baseClasses, virtualFuncs):
+def updateFunctionCounts(className, funcName, virtualFuncs):
     if virtualFuncs.has_key(funcName):
         virtualFuncs[funcName] += 1
     else:
         virtualFuncs[funcName] = 1
 
-    for baseClass in baseClasses:
-        if classes[baseClass].has_key(funcName):
-            classes[baseClass][funcName] += 1
-        else:
-            classes[baseClass][funcName] = 1
-
     classes[className] = virtualFuncs
 
-def parseXml(path):
+def parseBaseXml(path):
     tree = ET.parse(path)
     root = tree.getroot()
-    virtualfuncs = {}
     baseclasses = []
     baseclasscount = 0
     for baseClass in root.iter('basecompoundref'):
@@ -43,6 +36,34 @@ def parseXml(path):
     if baseclasscount == 0:
         return
 
+#    classname = root.find('compounddef').find('compoundname').text
+#    virtualfuncs = classes[classname]
+#    for baseClass in baseclasses:
+#        basefuncs = classes[baseClass]
+#        for virtualfunc in virtualfuncs.keys():
+#            if basefuncs.has_key(virtualfunc):
+#                basefuncs[virtualfunc] += 1
+#        classname[baseClass] = basefuncs
+
+def getFunctionName(memberdef):
+    funcName = memberdef.find('name').text + \
+            memberdef.find('argsstring').text
+
+# argsstring contains the 'override' keyword, so remove it
+# so we can get the "original" function name
+    funcName = funcName.replace(' override ', '')
+    funcName = funcName.replace(' final ', '')
+    virtidx = funcName.find('=')
+    if virtidx > 0:
+        funcName = funcName[0 : virtidx]
+    funcName = funcName.strip()
+    return funcName
+
+def parseXml(path):
+    tree = ET.parse(path)
+    root = tree.getroot()
+    virtualfuncs = {}
+
     classname = root.find('compounddef').find('compoundname').text
     if classes.has_key(classname):
         virtualfuncs = classes[classname]
@@ -51,39 +72,43 @@ def parseXml(path):
         if section.attrib['kind'] == 'public-func' or \
                 section.attrib['kind'] == 'protected-func':
             for memberdef in section.iter('memberdef'):
-                funcName = memberdef.find('definition').text + \
-                        memberdef.find('argsstring').text
-                virtidx = funcName.find('=')
-                if virtidx > 0:
-                    funcName = funcName[0 : virtidx]
-                funcName = funcName.strip()
+                funcName = getFunctionName(memberdef)
                 if memberdef.attrib['virt'] == 'virtual':
-                    updateFunctionCounts(classname, funcName, baseclasses, \
-                            virtualfuncs)
+                    updateFunctionCounts(classname, funcName, virtualfuncs)
                 elif memberdef.attrib['virt'] == 'pure-virtual':
-                    updateFunctionCounts(classname, funcName, baseclasses, \
-                            virtualfuncs)
+                    updateFunctionCounts(classname, funcName, virtualfuncs)
 
     classes[classname] = virtualfuncs
 
-def parseDir(rootDir, outname):
+def printCounts():
+    for className in classes.keys():
+        print("%s: " % className)
+        for funcName in classes[className].keys():
+            print("\t%s: %d" % (funcName, classes[className][funcName]))
+
+def parseDir(rootDir):
     for dirName, subdirList, fileList in os.walk(rootDir):
         for fileName in fileList:
             fName, ext = os.path.splitext(fileName)
             if ext and ext == '.xml':
                 parseXml(os.path.join(dirName, fileName))
-    print classes
+
+
+    for dirName, subdirList, fileList in os.walk(rootDir):
+        for fileName in fileList:
+            fName, ext = os.path.splitext(fileName)
+            if ext and ext == '.xml':
+                parseBaseXml(os.path.join(dirName, fileName))
+
+    printCounts()
 
 def main():
     args = parse_args()
     try:
         pathname = '.'
-        outname = 'out'
         if args.path:
             pathname = args.path
-        if args.out:
-            outname = args.out
-        parseDir(pathname, outname)
+        parseDir(pathname)
     except IOError as e:
         print "I/O error({0}): {1}".format(e.errno, e.strerror)
         raise
