@@ -11,8 +11,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="""scrubber.py - Constructs \
             class heirarchies from XML files""")
     parser.add_argument('-p', '--path', help='The root path to XML files')
-    parser.add_argument('-o', '--out', help="""Output directory. Defaults to \
-            \'out\'""")
     return parser.parse_args()
 
 def updateFunctionCounts(className, funcName, virtualFuncs):
