@@ -11,6 +11,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="""scrubber.py - Constructs \
             class heirarchies from XML files""")
     parser.add_argument('-p', '--path', help='The root path to XML files')
+    parser.add_argument('-o', '--output', help='The file to write output to')
     return parser.parse_args()
 
 def updateFunctionCounts(className, funcName, virtualFuncs):
@@ -83,16 +84,21 @@ def parseXml(path):
 
     classes[classname] = virtualfuncs
 
-def printCounts():
+def printCounts(out):
     for className in classes.keys():
-        print("%s: " % className)
+        out.write("%s:\n" % className)
         for funcName in classes[className].keys():
-            print("\t%s: %d" % (funcName, classes[className][funcName]))
+            out.write("\t%s: %d\n" % (funcName, classes[className][funcName]))
 
-    print("Max depth: %d" % maxdepth)
-    print("Deepest class: %s" % deepestclass)
+    out.write("Max depth: %d\n" % maxdepth)
+    out.write("Deepest class: %s\n" % deepestclass)
 
-def parseDir(rootDir):
+def parseDir(rootDir, outpath):
+    if outpath:
+        out = open(outpath, 'w')
+    else:
+        out = sys.stdout
+
     print 'Finding class virtual functions'
     for dirName, subdirList, fileList in os.walk(rootDir):
         for fileName in fileList:
@@ -108,15 +114,18 @@ def parseDir(rootDir):
             if ext and ext == '.xml':
                 parseBaseXml(os.path.join(dirName, fileName))
 
-    printCounts()
+    printCounts(out)
 
 def main():
     args = parse_args()
     try:
         pathname = '.'
+        outpath = None
         if args.path:
             pathname = args.path
-        parseDir(pathname)
+        if args.output:
+            outpath = args.output
+        parseDir(pathname, outpath)
     except IOError as e:
         print "I/O error({0}): {1}".format(e.errno, e.strerror)
         raise
