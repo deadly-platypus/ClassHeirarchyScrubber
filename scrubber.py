@@ -4,6 +4,8 @@ import os
 import argparse
 
 classes = {}
+maxdepth = 0
+deepestclass = ''
 
 def parse_args():
     parser = argparse.ArgumentParser(description="""scrubber.py - Constructs \
@@ -36,14 +38,17 @@ def parseBaseXml(path):
     if baseclasscount == 0:
         return
 
-#    classname = root.find('compounddef').find('compoundname').text
-#    virtualfuncs = classes[classname]
-#    for baseClass in baseclasses:
-#        basefuncs = classes[baseClass]
-#        for virtualfunc in virtualfuncs.keys():
-#            if basefuncs.has_key(virtualfunc):
-#                basefuncs[virtualfunc] += 1
-#        classname[baseClass] = basefuncs
+    classname = root.find('compounddef').find('compoundname').text
+    virtualfuncs = classes[classname]
+    for baseClass in baseclasses:
+        basefuncs = classes[baseClass]
+        for virtualfunc in virtualfuncs.keys():
+            if basefuncs.has_key(virtualfunc):
+                basefuncs[virtualfunc] += 1
+                if basefuncs[virtualfunc] > maxdepth:
+                    maxdepth = basefuncs[virtualfunc]
+                    deepestclass = classname
+        classes[baseClass] = basefuncs
 
 def getFunctionName(memberdef):
     funcName = memberdef.find('name').text + \
@@ -86,7 +91,11 @@ def printCounts():
         for funcName in classes[className].keys():
             print("\t%s: %d" % (funcName, classes[className][funcName]))
 
+    print("Max depth: %d" % maxdepth)
+    print("Deepest class: %s" % deepestclass)
+
 def parseDir(rootDir):
+    print 'Finding class virtual functions'
     for dirName, subdirList, fileList in os.walk(rootDir):
         for fileName in fileList:
             fName, ext = os.path.splitext(fileName)
@@ -94,6 +103,7 @@ def parseDir(rootDir):
                 parseXml(os.path.join(dirName, fileName))
 
 
+    print 'Finding potential call site numbers'
     for dirName, subdirList, fileList in os.walk(rootDir):
         for fileName in fileList:
             fName, ext = os.path.splitext(fileName)
