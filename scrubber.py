@@ -38,6 +38,7 @@ def parseBaseXml(path):
         return
 
     classname = root.find('compounddef').find('compoundname').text
+    print("Parsing %s" % classname)
     virtualfuncs = classes[classname]
     for baseClass in baseclasses:
         basefuncs = classes[baseClass]
@@ -69,6 +70,7 @@ def parseXml(path):
     virtualfuncs = {}
 
     classname = root.find('compounddef').find('compoundname').text
+    print("Parsing %s" % classname)
     if classes.has_key(classname):
         virtualfuncs = classes[classname]
 
